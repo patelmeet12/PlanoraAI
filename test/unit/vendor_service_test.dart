@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:planora_ai/features/events/domain/models/event_category.dart';
 import 'package:planora_ai/features/vendors/domain/models/vendor_category.dart';
 import 'package:planora_ai/features/vendors/domain/models/vendor_model.dart';
 import 'package:planora_ai/features/vendors/domain/services/vendor_service.dart';
@@ -83,6 +84,52 @@ void main() {
       expect(v2Comp.isLowestPrice, false);
       expect(v2Comp.isHighestRated, true);
       expect(v2Comp.priceDifference, 1000.0);
+    });
+
+    test('Handles empty vendor list safely without error', () {
+      expect(VendorService.compareVendors([]), isEmpty);
+      expect(VendorService.calculateBookingProgress([]), 0.0);
+    });
+
+    test('generateSampleVendors generates category-tailored benchmark vendors', () {
+      final vendors = VendorService.generateSampleVendors(
+        eventId: 'test_event',
+        category: EventCategory.wedding,
+        totalBudget: 30000,
+      );
+
+      expect(vendors.isNotEmpty, true);
+      expect(vendors.any((v) => v.category == VendorCategory.venue), true);
+      expect(vendors.any((v) => v.category == VendorCategory.caterer), true);
+    });
+
+    test('VendorModel toJson, fromJson, and copyWith preserve data integrity', () {
+      const vendor = VendorModel(
+        id: 'v_ser',
+        eventId: 'e_ser',
+        name: 'Artisan Floral',
+        category: VendorCategory.florist,
+        contactPhone: '555-0199',
+        contactEmail: 'rose@bloom.com',
+        quotedPrice: 2400,
+        bookingStatus: BookingStatus.quoted,
+        userRating: 4.8,
+        notes: 'Includes arbor styling',
+      );
+
+      final json = vendor.toJson();
+      final revived = VendorModel.fromJson(json);
+
+      expect(revived.id, vendor.id);
+      expect(revived.name, vendor.name);
+      expect(revived.category, vendor.category);
+      expect(revived.quotedPrice, 2400.0);
+      expect(revived.bookingStatus, BookingStatus.quoted);
+      expect(revived.userRating, 4.8);
+
+      final updated = vendor.copyWith(bookingStatus: BookingStatus.booked);
+      expect(updated.bookingStatus, BookingStatus.booked);
+      expect(updated.name, vendor.name);
     });
   });
 }

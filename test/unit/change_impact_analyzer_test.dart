@@ -113,5 +113,22 @@ void main() {
       expect(result.daysShiftDelta, -17);
       expect(result.warnings.any((w) => w.contains('earlier')), true);
     });
+
+    test('Identifies event category shift and flags theme realignment and milestone review', () {
+      final proposedEvent = origEvent.copyWith(
+        category: EventCategory.communityEvent,
+      );
+
+      final result = ChangeImpactAnalyzer.analyze(
+        originalEvent: origEvent,
+        proposedEvent: proposedEvent,
+        currentBudgetItems: budgetItems,
+        currentTasks: tasks,
+        currentVendors: vendors,
+      );
+
+      expect(result.warnings.any((w) => w.contains('Event type changed')), true);
+      expect(result.recommendations.any((r) => r.contains('realignment')), true);
+    });
   });
 }

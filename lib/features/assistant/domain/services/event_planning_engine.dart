@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../events/domain/models/event_category.dart';
 import '../../../events/domain/models/event_model.dart';
 import '../../../budget/domain/models/budget_item.dart';
@@ -56,6 +57,55 @@ class EventPlanningService {
     return _generateDeterministicSmartPlan(event);
   }
 
+  /// Validates structured AI response schema before using it to update application state
+  static bool validateStructuredAiResponse(dynamic response) {
+    if (response is! Map) return false;
+    final map = Map<String, dynamic>.from(response);
+    if (map['conceptSummary'] is! String || (map['conceptSummary'] as String).trim().isEmpty) {
+      return false;
+    }
+    if (map['themeStatement'] is! String || (map['themeStatement'] as String).trim().isEmpty) {
+      return false;
+    }
+    if (map['potentialRisks'] is! List) return false;
+    if (map['suggestedNextActions'] is! List) return false;
+    return true;
+  }
+
+  /// Parses validated AI response into a GeneratedEventPlan
+  static GeneratedEventPlan parseStructuredAiPlan({
+    required Map<String, dynamic> json,
+    required EventModel event,
+  }) {
+    if (!validateStructuredAiResponse(json)) {
+      return _generateDeterministicSmartPlan(event);
+    }
+
+    final deterministic = _generateDeterministicSmartPlan(event);
+    final risksList = (json['potentialRisks'] as List)
+        .map((e) => e.toString().trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    final actionsList = (json['suggestedNextActions'] as List)
+        .map((e) => e.toString().trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    return GeneratedEventPlan(
+      event: event,
+      conceptSummary: (json['conceptSummary'] as String).trim(),
+      themeStatement: (json['themeStatement'] as String).trim(),
+      budgetItems: deterministic.budgetItems,
+      tasks: deterministic.tasks,
+      vendors: deterministic.vendors,
+      ideas: deterministic.ideas,
+      runSheet: deterministic.runSheet,
+      potentialRisks: risksList.isNotEmpty ? risksList : deterministic.potentialRisks,
+      suggestedNextActions: actionsList.isNotEmpty ? actionsList : deterministic.suggestedNextActions,
+      isRealAi: true,
+    );
+  }
+
   static GeneratedEventPlan _generateDeterministicSmartPlan(EventModel event) {
     const uuid = Uuid();
     final budgetItems = _generateBudgetDistribution(uuid, event);
@@ -93,8 +143,9 @@ class EventPlanningService {
   }
 
   static String _generateConceptSummary(EventModel event) {
+    final bFmt = CurrencyFormatter.format(event.totalBudget, currency: event.currency);
     return 'A curated ${event.style.displayName.toLowerCase()} ${event.category.displayName} designed for ${event.guestCount} guests in ${event.city}. '
-        'Balanced across an intentional budget of \$${event.totalBudget.toStringAsFixed(0)} ${event.currency}, '
+        'Balanced across an intentional budget of $bFmt, '
         'prioritizing ${event.theme} aesthetics and seamless accessibility.';
   }
 

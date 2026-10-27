@@ -122,5 +122,53 @@ void main() {
         expect(p.budgetItemId, 'item_unconfirmed');
       }
     });
+
+    test('Zero budget and zero guests safely compute without NaN or Infinity', () {
+      final summary = BudgetOptimizerService.calculateSummary(
+        totalBudget: 0,
+        guestCount: 0,
+        items: [
+          const BudgetItem(
+            id: 'item_1',
+            eventId: 'e1',
+            category: BudgetCategory.venue,
+            name: 'Hall',
+            estimatedAmount: 500,
+            isConfirmed: false,
+          ),
+        ],
+      );
+
+      expect(summary.costPerGuest, 0.0);
+      expect(summary.costPerGuest.isNaN, false);
+      expect(summary.costPerGuest.isInfinite, false);
+      expect(summary.utilizationPercentage, 0.0);
+      expect(summary.remainingBalance, -500.0);
+      expect(summary.thresholdState, BudgetThresholdState.overBudget);
+    });
+
+    test('generateAdjustments formats descriptions using dynamic currency', () {
+      final items = [
+        const BudgetItem(
+          id: 'item_unconfirmed',
+          eventId: 'e1',
+          category: BudgetCategory.giftsFavors,
+          name: 'Party Favors',
+          estimatedAmount: 2000,
+          isConfirmed: false,
+          priority: 3,
+        ),
+      ];
+
+      final proposalsEur = BudgetOptimizerService.generateAdjustments(
+        totalBudget: 1500,
+        items: items,
+        overageAmount: 500,
+        currency: 'EUR',
+      );
+
+      expect(proposalsEur.isNotEmpty, true);
+      expect(proposalsEur.first.description.contains('€') || proposalsEur.first.description.contains('EUR'), true);
+    });
   });
 }

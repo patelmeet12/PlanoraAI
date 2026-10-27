@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/widgets/accessible_card.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../../shared/widgets/status_badge.dart';
@@ -169,7 +170,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.normal),
                               ),
                               subtitle: Text(
-                                '${agg.event.category.displayName} • ${agg.event.guestCount} guests • \$${agg.event.totalBudget.toStringAsFixed(0)}',
+                                '${agg.event.category.displayName} • ${agg.event.guestCount} guests • ${CurrencyFormatter.format(agg.event.totalBudget, currency: agg.event.currency)}',
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -396,6 +397,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         );
       },
-    );
+    ).then((_) => textCtrl.dispose());
   }
 }

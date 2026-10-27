@@ -1,4 +1,6 @@
 import 'package:uuid/uuid.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../events/domain/models/event_model.dart';
 import '../../../budget/domain/models/budget_item.dart';
 import '../../../timeline/domain/models/timeline_task.dart';
@@ -20,6 +22,8 @@ class AiCopilotService {
     final lower = prompt.toLowerCase().trim();
     final daysRemaining = DateFormatter.daysRemaining(event.date);
 
+    final cur = event.currency;
+
     // 1. Budget reduction request: e.g. "Reduce my budget by 15%", "Cut budget"
     if (lower.contains('reduce') && lower.contains('budget') ||
         lower.contains('cut') && lower.contains('budget') ||
@@ -27,24 +31,29 @@ class AiCopilotService {
       double percent = 0.15;
       final match = RegExp(r'(\d+)%').firstMatch(lower);
       if (match != null) {
-        percent = (int.tryParse(match.group(1)!) ?? 15) / 100.0;
+        final parsed = (int.tryParse(match.group(1)!) ?? 15) / 100.0;
+        percent = parsed.clamp(0.01, 0.90);
       }
 
       final cutAmount = event.totalBudget * percent;
-      final newBudget = (event.totalBudget - cutAmount).clamp(100.0, 100000000.0);
+      final newBudget = (event.totalBudget - cutAmount).clamp(AppConstants.minBudget, AppConstants.maxBudget);
+
+      final origFmt = CurrencyFormatter.format(event.totalBudget, currency: cur);
+      final newFmt = CurrencyFormatter.format(newBudget, currency: cur);
+      final cutFmt = CurrencyFormatter.format(cutAmount, currency: cur);
 
       return ChatMessage(
         id: uuid.v4(),
         sender: ChatSender.assistant,
         text: 'Reducing your budget by ${(percent * 100).round()}% lowers the total from '
-            '\$${event.totalBudget.toStringAsFixed(0)} to \$${newBudget.toStringAsFixed(0)} '
-            '(savings of \$${cutAmount.toStringAsFixed(0)}).\n\n'
+            '$origFmt to $newFmt '
+            '(savings of $cutFmt).\n\n'
             'I recommend applying this reduction primarily to flexible categories like floral decor, stationery, and favors '
             'while locking in your core venue and catering baseline.',
         timestamp: DateTime.now(),
         proposal: ChangeProposal(
           actionType: ProposedActionType.budgetCut,
-          description: 'Reduce total budget by ${(percent * 100).round()}% to \$${newBudget.toStringAsFixed(0)}',
+          description: 'Reduce total budget by ${(percent * 100).round()}% to $newFmt',
           newBudget: newBudget,
         ),
       );
@@ -55,16 +64,17 @@ class AiCopilotService {
       int additional = 20;
       final match = RegExp(r'(\d+)').firstMatch(lower);
       if (match != null) {
-        additional = int.tryParse(match.group(1)!) ?? 20;
+        additional = (int.tryParse(match.group(1)!) ?? 20).clamp(1, 10000);
       }
-      final newCount = event.guestCount + additional;
+      final newCount = (event.guestCount + additional).clamp(AppConstants.minGuestCount, AppConstants.maxGuestCount);
+      final cateringDelta = CurrencyFormatter.format(additional * 45, currency: cur);
 
       return ChatMessage(
         id: uuid.v4(),
         sender: ChatSender.assistant,
         text: 'Increasing guest headcount from ${event.guestCount} to $newCount (+$additional attendees).\n\n'
             'Key Impacts to note:\n'
-            '• Catering & beverage estimates will increase by approximately ~\$${(additional * 45).toStringAsFixed(0)}.\n'
+            '• Catering & beverage estimates will increase by approximately ~$cateringDelta.\n'
             '• You will need $additional extra place settings, chairs, and favor tokens.\n'
             '• Please verify your venue maximum permitted capacity in ${event.city}.\n\n'
             'Would you like to review and apply this headcount update?',
@@ -166,12 +176,13 @@ class AiCopilotService {
     }
 
     // 7. Generic query fallback responding intelligently with event context
+    final budgetFmt = CurrencyFormatter.format(event.totalBudget, currency: cur);
     return ChatMessage(
       id: uuid.v4(),
       sender: ChatSender.assistant,
       text: 'I am analyzing "${event.name}" (${event.category.displayName} on ${DateFormatter.formatMediumDate(event.date)} with ${event.guestCount} guests).\n\n'
           'Regarding "$prompt":\n'
-          'Your active budget is \$${event.totalBudget.toStringAsFixed(0)} ${event.currency} across ${budgetItems.length} categories. '
+          'Your active budget is $budgetFmt across ${budgetItems.length} categories. '
           'You currently have ${tasks.where((t) => t.isCompleted).length} of ${tasks.length} tasks completed.\n\n'
           'You can ask me to adjust your budget, simulate guest count shifts, review vendor comparisons, or optimize your timeline anytime!',
       timestamp: DateTime.now(),

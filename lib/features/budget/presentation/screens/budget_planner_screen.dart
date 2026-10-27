@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/widgets/accessible_card.dart';
@@ -86,7 +87,7 @@ class _BudgetPlannerScreenState extends ConsumerState<BudgetPlannerScreen> {
                     ],
                   ),
                   ElevatedButton.icon(
-                    onPressed: () => _showAddExpenseDialog(context, aggregate.event.id),
+                    onPressed: () => _showAddExpenseDialog(context, aggregate.event.id, cur),
                     icon: const Icon(Icons.add, size: 18),
                     label: const Text('Add Expense Item'),
                   ),
@@ -519,7 +520,7 @@ class _BudgetPlannerScreenState extends ConsumerState<BudgetPlannerScreen> {
     final theme = Theme.of(context);
 
     return InkWell(
-      onTap: () => _showEditExpenseDialog(context, item),
+      onTap: () => _showEditExpenseDialog(context, item, cur),
       borderRadius: BorderRadius.circular(10),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
@@ -598,12 +599,15 @@ class _BudgetPlannerScreenState extends ConsumerState<BudgetPlannerScreen> {
     );
   }
 
-  void _showAddExpenseDialog(BuildContext context, String eventId) {
+  void _showAddExpenseDialog(BuildContext context, String eventId, String currency) {
     final nameCtrl = TextEditingController();
     final amountCtrl = TextEditingController();
     BudgetCategory selectedCat = BudgetCategory.venue;
     bool isConfirmed = false;
     int priority = 2;
+    String? nameError;
+    String? amountError;
+    final symbol = AppConstants.currencySymbols[currency] ?? r'$';
 
     showDialog(
       context: context,
@@ -618,7 +622,13 @@ class _BudgetPlannerScreenState extends ConsumerState<BudgetPlannerScreen> {
                   children: [
                     TextField(
                       controller: nameCtrl,
-                      decoration: const InputDecoration(labelText: 'Expense Name *'),
+                      decoration: InputDecoration(
+                        labelText: 'Expense Name *',
+                        errorText: nameError,
+                      ),
+                      onChanged: (_) {
+                        if (nameError != null) setDlgState(() => nameError = null);
+                      },
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<BudgetCategory>(
@@ -633,11 +643,19 @@ class _BudgetPlannerScreenState extends ConsumerState<BudgetPlannerScreen> {
                     TextField(
                       controller: amountCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Amount *', prefixText: '\$ '),
+                      decoration: InputDecoration(
+                        labelText: 'Amount *',
+                        prefixText: '$symbol ',
+                        errorText: amountError,
+                      ),
+                      onChanged: (_) {
+                        if (amountError != null) setDlgState(() => amountError = null);
+                      },
                     ),
                     const SizedBox(height: 12),
                     SwitchListTile(
                       title: const Text('Is this confirmed with contract?'),
+                      subtitle: const Text('Confirmed items are locked from automated cuts'),
                       value: isConfirmed,
                       onChanged: (v) => setDlgState(() => isConfirmed = v),
                     ),
@@ -652,8 +670,20 @@ class _BudgetPlannerScreenState extends ConsumerState<BudgetPlannerScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     final name = nameCtrl.text.trim();
-                    final amt = double.tryParse(amountCtrl.text.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
-                    if (name.isEmpty || amt <= 0) return;
+                    final amtVal = amountCtrl.text.trim();
+                    bool hasErr = false;
+
+                    if (name.isEmpty) {
+                      setDlgState(() => nameError = 'Expense name is required');
+                      hasErr = true;
+                    }
+                    final amt = double.tryParse(amtVal.replaceAll(RegExp(r'[^0-9.]'), ''));
+                    if (amt == null || amt <= 0 || amt.isNaN || amt.isInfinite) {
+                      setDlgState(() => amountError = 'Enter a valid positive amount');
+                      hasErr = true;
+                    }
+
+                    if (hasErr) return;
 
                     const uuid = Uuid();
                     final newItem = BudgetItem(
@@ -661,7 +691,7 @@ class _BudgetPlannerScreenState extends ConsumerState<BudgetPlannerScreen> {
                       eventId: eventId,
                       category: selectedCat,
                       name: name,
-                      estimatedAmount: isConfirmed ? amt : amt,
+                      estimatedAmount: isConfirmed ? amt! : amt!,
                       confirmedAmount: isConfirmed ? amt : 0.0,
                       isConfirmed: isConfirmed,
                       priority: priority,
@@ -677,13 +707,19 @@ class _BudgetPlannerScreenState extends ConsumerState<BudgetPlannerScreen> {
           },
         );
       },
-    );
+    ).then((_) {
+      nameCtrl.dispose();
+      amountCtrl.dispose();
+    });
   }
 
-  void _showEditExpenseDialog(BuildContext context, BudgetItem item) {
+  void _showEditExpenseDialog(BuildContext context, BudgetItem item, String currency) {
     final nameCtrl = TextEditingController(text: item.name);
     final amountCtrl = TextEditingController(text: item.effectiveAmount.toStringAsFixed(0));
     bool isConfirmed = item.isConfirmed;
+    String? nameError;
+    String? amountError;
+    final symbol = AppConstants.currencySymbols[currency] ?? r'$';
 
     showDialog(
       context: context,
@@ -697,13 +733,26 @@ class _BudgetPlannerScreenState extends ConsumerState<BudgetPlannerScreen> {
                 children: [
                   TextField(
                     controller: nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Item Name'),
+                    decoration: InputDecoration(
+                      labelText: 'Item Name *',
+                      errorText: nameError,
+                    ),
+                    onChanged: (_) {
+                      if (nameError != null) setDlgState(() => nameError = null);
+                    },
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: amountCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Amount', prefixText: '\$ '),
+                    decoration: InputDecoration(
+                      labelText: 'Amount *',
+                      prefixText: '$symbol ',
+                      errorText: amountError,
+                    ),
+                    onChanged: (_) {
+                      if (amountError != null) setDlgState(() => amountError = null);
+                    },
                   ),
                   const SizedBox(height: 12),
                   SwitchListTile(
@@ -722,13 +771,26 @@ class _BudgetPlannerScreenState extends ConsumerState<BudgetPlannerScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     final name = nameCtrl.text.trim();
-                    final amt = double.tryParse(amountCtrl.text.replaceAll(RegExp(r'[^0-9.]'), '')) ?? item.effectiveAmount;
+                    final amtVal = amountCtrl.text.trim();
+                    bool hasErr = false;
+
+                    if (name.isEmpty) {
+                      setDlgState(() => nameError = 'Item name cannot be empty');
+                      hasErr = true;
+                    }
+                    final amt = double.tryParse(amtVal.replaceAll(RegExp(r'[^0-9.]'), ''));
+                    if (amt == null || amt <= 0 || amt.isNaN || amt.isInfinite) {
+                      setDlgState(() => amountError = 'Enter a valid positive amount');
+                      hasErr = true;
+                    }
+
+                    if (hasErr) return;
 
                     final updated = item.copyWith(
-                      name: name.isNotEmpty ? name : item.name,
+                      name: name,
                       isConfirmed: isConfirmed,
-                      confirmedAmount: isConfirmed ? amt : item.confirmedAmount,
-                      estimatedAmount: !isConfirmed ? amt : item.estimatedAmount,
+                      confirmedAmount: isConfirmed ? amt! : item.confirmedAmount,
+                      estimatedAmount: !isConfirmed ? amt! : item.estimatedAmount,
                     );
 
                     await ref.read(activeEventProvider.notifier).updateBudgetItem(updated);
@@ -741,6 +803,9 @@ class _BudgetPlannerScreenState extends ConsumerState<BudgetPlannerScreen> {
           },
         );
       },
-    );
+    ).then((_) {
+      nameCtrl.dispose();
+      amountCtrl.dispose();
+    });
   }
 }

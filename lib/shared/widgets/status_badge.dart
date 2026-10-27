@@ -60,6 +60,7 @@ class StatusBadge extends StatelessWidget {
 
     return Semantics(
       label: '$label status badge',
+      excludeSemantics: true,
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: compact ? 8 : 10,

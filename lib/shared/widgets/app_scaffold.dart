@@ -145,14 +145,25 @@ class AppScaffold extends ConsumerWidget {
           ],
         ),
         actions: [
-          // AI status badge
+          // AI status badge with transparency modal
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: StatusBadge(
-              label: aiSettings.isRealAiEnabled ? 'AI-Powered' : 'Smart Demo Mode',
-              icon: aiSettings.isRealAiEnabled ? Icons.bolt : Icons.tune,
-              type: aiSettings.isRealAiEnabled ? BadgeType.success : BadgeType.info,
-              compact: true,
+            child: Semantics(
+              button: true,
+              label: 'AI Architecture Mode: ${aiSettings.isRealAiEnabled ? "AI-Powered" : "Smart Demo Mode"}. Click to view details.',
+              child: Tooltip(
+                message: 'AI Planning Mode: Click for details',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => _showAiTransparencyDialog(context, aiSettings.isRealAiEnabled),
+                  child: StatusBadge(
+                    label: aiSettings.isRealAiEnabled ? 'AI-Powered' : 'Smart Demo Mode',
+                    icon: aiSettings.isRealAiEnabled ? Icons.bolt : Icons.tune,
+                    type: aiSettings.isRealAiEnabled ? BadgeType.success : BadgeType.info,
+                    compact: true,
+                  ),
+                ),
+              ),
             ),
           ),
 
@@ -225,39 +236,44 @@ class AppScaffold extends ConsumerWidget {
                 if (isDesktop) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-                    child: Material(
-                      color: isSelected
-                          ? theme.colorScheme.primaryContainer
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                      child: InkWell(
-                        onTap: () => context.go(item.route),
+                    child: Semantics(
+                      button: true,
+                      selected: isSelected,
+                      label: '${item.label} page navigation',
+                      child: Material(
+                        color: isSelected
+                            ? theme.colorScheme.primaryContainer
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          child: Row(
-                            children: [
-                              Icon(
-                                isSelected ? item.selectedIcon : item.icon,
-                                size: 20,
-                                color: isSelected
-                                    ? theme.colorScheme.onPrimaryContainer
-                                    : theme.colorScheme.onSurface.withAlpha(200),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  item.label,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                    color: isSelected
-                                        ? theme.colorScheme.onPrimaryContainer
-                                        : theme.colorScheme.onSurface,
+                        child: InkWell(
+                          onTap: () => context.go(item.route),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected ? item.selectedIcon : item.icon,
+                                  size: 20,
+                                  color: isSelected
+                                      ? theme.colorScheme.onPrimaryContainer
+                                      : theme.colorScheme.onSurface.withAlpha(200),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    item.label,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                      color: isSelected
+                                          ? theme.colorScheme.onPrimaryContainer
+                                          : theme.colorScheme.onSurface,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -267,13 +283,18 @@ class AppScaffold extends ConsumerWidget {
                   // Compact icon-only rail for tablet
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: IconButton(
-                      icon: Icon(isSelected ? item.selectedIcon : item.icon),
-                      tooltip: item.label,
-                      color: isSelected
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurface.withAlpha(180),
-                      onPressed: () => context.go(item.route),
+                    child: Semantics(
+                      button: true,
+                      selected: isSelected,
+                      label: '${item.label} page navigation',
+                      child: IconButton(
+                        icon: Icon(isSelected ? item.selectedIcon : item.icon),
+                        tooltip: item.label,
+                        color: isSelected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface.withAlpha(180),
+                        onPressed: () => context.go(item.route),
+                      ),
                     ),
                   );
                 }
@@ -419,6 +440,56 @@ class AppScaffold extends ConsumerWidget {
     if (path == '/timeline') return 2;
     if (path == '/copilot') return 3;
     return 4;
+  }
+
+  void _showAiTransparencyDialog(BuildContext context, bool isRealAi) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              isRealAi ? Icons.bolt : Icons.tune,
+              color: isRealAi ? AppColors.success : AppColors.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(isRealAi ? 'AI-Powered Mode' : 'Smart Demo Mode'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isRealAi
+                  ? 'Planora AI is routing planning prompts through a verified server-side proxy. No private API keys are ever stored or exposed in client-side Web code.'
+                  : 'Planora AI is running in transparent Smart Demo Mode. It uses deterministic category heuristics, milestone scheduling countdowns, and curated event ontologies entirely in your local browser.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Zero external telemetry or tracking is performed. You can switch to server-proxied AI at any time in Settings.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                  ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.go('/settings');
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

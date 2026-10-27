@@ -348,6 +348,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     TaskPriority priority = TaskPriority.medium;
     String category = 'General';
     final List<String> selectedDeps = [];
+    String? titleError;
 
     showDialog(
       context: context,
@@ -363,7 +364,13 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                   children: [
                     TextField(
                       controller: titleCtrl,
-                      decoration: const InputDecoration(labelText: 'Task Title *'),
+                      decoration: InputDecoration(
+                        labelText: 'Task Title *',
+                        errorText: titleError,
+                      ),
+                      onChanged: (_) {
+                        if (titleError != null) setDlgState(() => titleError = null);
+                      },
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -427,7 +434,10 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     final title = titleCtrl.text.trim();
-                    if (title.isEmpty) return;
+                    if (title.isEmpty) {
+                      setDlgState(() => titleError = 'Task title is required');
+                      return;
+                    }
 
                     const uuid = Uuid();
                     final newId = uuid.v4();
@@ -468,6 +478,9 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
           },
         );
       },
-    );
+    ).then((_) {
+      titleCtrl.dispose();
+      descCtrl.dispose();
+    });
   }
 }

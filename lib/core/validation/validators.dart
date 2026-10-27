@@ -36,9 +36,13 @@ class FormValidators {
     if (value == null || value.trim().isEmpty) {
       return 'Budget is required';
     }
-    final cleaned = value.replaceAll(RegExp(r'[^0-9.]'), '');
+    final trimmed = value.trim();
+    if (trimmed.startsWith('-') || trimmed.contains('-')) {
+      return 'Budget cannot be negative';
+    }
+    final cleaned = trimmed.replaceAll(RegExp(r'[^0-9.]'), '');
     final budget = double.tryParse(cleaned);
-    if (budget == null) {
+    if (budget == null || budget.isNaN || budget.isInfinite) {
       return 'Please enter a valid numeric budget';
     }
     if (budget < AppConstants.minBudget) {
@@ -69,16 +73,42 @@ class FormValidators {
     return null;
   }
 
-  static String? validateNumericAmount(String? value, {bool allowZero = false}) {
+  static String? validateNumericAmount(String? value, {bool allowZero = false, double? minAmount}) {
     if (value == null || value.trim().isEmpty) {
       return 'Amount is required';
     }
-    final amount = double.tryParse(value.replaceAll(RegExp(r'[^0-9.]'), ''));
-    if (amount == null) {
+    final trimmed = value.trim();
+    if (trimmed.startsWith('-') || trimmed.contains('-')) {
+      return 'Amount cannot be negative';
+    }
+    final cleaned = trimmed.replaceAll(RegExp(r'[^0-9.]'), '');
+    final amount = double.tryParse(cleaned);
+    if (amount == null || amount.isNaN || amount.isInfinite) {
       return 'Please enter a valid number';
     }
-    if (allowZero ? amount < 0 : amount <= 0) {
-      return 'Amount must be greater than ${allowZero ? -1 : 0}';
+    if (minAmount != null && amount < minAmount) {
+      return 'Amount must be at least $minAmount';
+    }
+    final effectiveAllowZero = allowZero || (minAmount != null && minAmount <= 0);
+    if (effectiveAllowZero ? amount < 0 : amount <= 0) {
+      return 'Amount must be greater than ${effectiveAllowZero ? -1 : 0}';
+    }
+    return null;
+  }
+
+  static String? validateVenueName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Venue name is required';
+    }
+    if (value.trim().length > 120) {
+      return 'Venue name cannot exceed 120 characters';
+    }
+    return null;
+  }
+
+  static String? validateNotes(String? value) {
+    if (value != null && value.length > 1000) {
+      return 'Notes cannot exceed 1000 characters';
     }
     return null;
   }

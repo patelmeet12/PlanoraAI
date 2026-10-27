@@ -5,6 +5,7 @@ import '../../../budget/domain/services/budget_optimizer_service.dart';
 import '../../../timeline/domain/models/timeline_task.dart';
 import '../../../vendors/domain/models/vendor_model.dart';
 import '../../../vendors/domain/models/vendor_category.dart';
+import '../../../../core/utils/currency_formatter.dart';
 
 class ChangeImpactResult {
   final EventModel originalEvent;
@@ -103,6 +104,18 @@ class ChangeImpactAnalyzer {
     final List<String> impactedTasks = [];
     final List<String> warnings = [];
     final List<String> recommendations = [];
+    final cur = proposedEvent.currency;
+
+    // Event Category / Type Changes
+    if (originalEvent.category != proposedEvent.category) {
+      warnings.add(
+        'Event category changed from ${originalEvent.category.displayName} to ${proposedEvent.category.displayName}. Core themes, milestones, and vendor expectations will shift.',
+      );
+      recommendations.add(
+        'Review and regenerate category-specific checklist tasks to reflect ${proposedEvent.category.displayName} conventions.',
+      );
+      affectedCategories.add('Theme & Milestone Strategy');
+    }
 
     // Guest Count Changes
     if (guestDelta != 0) {
@@ -110,9 +123,11 @@ class ChangeImpactAnalyzer {
       affectedCategories.add('Invitations & Stationery');
       affectedCategories.add('Favors & Gifts');
 
+      final cateringFmt = CurrencyFormatter.format(cateringDeltaCost.abs(), currency: cur);
+
       if (guestDelta > 0) {
         warnings.add(
-          'Guest count increased by +$guestDelta. Estimated catering cost will increase by ~\$${cateringDeltaCost.abs().toStringAsFixed(0)}.',
+          'Guest count increased by +$guestDelta. Estimated catering cost will increase by ~$cateringFmt.',
         );
         recommendations.add(
           'Verify that your selected venue has adequate fire-safety capacity for ${proposedEvent.guestCount} attendees.',
@@ -122,7 +137,7 @@ class ChangeImpactAnalyzer {
         );
       } else {
         recommendations.add(
-          'Guest count decreased by ${guestDelta.abs()}. You can save approximately ~\$${cateringDeltaCost.abs().toStringAsFixed(0)} on catering.',
+          'Guest count decreased by ${guestDelta.abs()}. You can save approximately ~$cateringFmt on catering.',
         );
       }
 
@@ -144,16 +159,17 @@ class ChangeImpactAnalyzer {
 
     // Budget Changes
     if (budgetDelta != 0) {
+      final deltaFmt = CurrencyFormatter.format(budgetDelta.abs(), currency: cur);
       if (budgetDelta < 0) {
         warnings.add(
-          'Total budget reduced by \$${budgetDelta.abs().toStringAsFixed(0)}. Current planned expenses may exceed new ceiling.',
+          'Total budget reduced by $deltaFmt. Current planned expenses may exceed new ceiling.',
         );
         recommendations.add(
           'Review the Intelligent Budget Optimizer to accept automated cuts in flexible categories.',
         );
       } else {
         recommendations.add(
-          'Total budget increased by +\$${budgetDelta.toStringAsFixed(0)}. You can increase contingency reserve or upgrade creative vendors.',
+          'Total budget increased by +$deltaFmt. You can increase contingency reserve or upgrade creative vendors.',
         );
       }
     }
@@ -181,8 +197,22 @@ class ChangeImpactAnalyzer {
 
     // Budget threshold warning
     if (proposedSummary.thresholdState == BudgetThresholdState.overBudget) {
+      final overageFmt = CurrencyFormatter.format(
+        proposedSummary.totalPlannedExpenses - proposedEvent.totalBudget,
+        currency: cur,
+      );
       warnings.add(
-        'Warning: Proposed adjustments will put this event OVER BUDGET by \$${(proposedSummary.totalPlannedExpenses - proposedEvent.totalBudget).toStringAsFixed(0)}.',
+        'Warning: Proposed adjustments will put this event OVER BUDGET by $overageFmt.',
+      );
+    }
+
+    // Category Shift Changes
+    if (proposedEvent.category != originalEvent.category) {
+      warnings.add(
+        'Event type changed from ${originalEvent.category.displayName} to ${proposedEvent.category.displayName}.',
+      );
+      recommendations.add(
+        'Conduct a theme and milestone realignment review to adapt tasks and decor to the new ${proposedEvent.category.displayName} format.',
       );
     }
 

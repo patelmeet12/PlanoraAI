@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../models/budget_item.dart';
 import '../models/budget_category.dart';
 import '../models/budget_adjustment.dart';
@@ -59,11 +60,14 @@ class BudgetOptimizerService {
 
     final double totalPlanned = confirmedTotal + estimatedTotal;
     final double remaining = totalBudget - totalPlanned;
-    final double perGuest = guestCount > 0 ? (totalPlanned / guestCount) : 0.0;
-    final double utilization = totalBudget > 0 ? (totalPlanned / totalBudget) * 100.0 : 0.0;
+    final double rawPerGuest = guestCount > 0 ? (totalPlanned / guestCount) : 0.0;
+    final double rawUtilization = totalBudget > 0 ? (totalPlanned / totalBudget) * 100.0 : 0.0;
+
+    final double perGuest = rawPerGuest.isNaN || rawPerGuest.isInfinite ? 0.0 : rawPerGuest;
+    final double utilization = rawUtilization.isNaN || rawUtilization.isInfinite ? 0.0 : rawUtilization;
 
     BudgetThresholdState state;
-    if (utilization > overBudgetThreshold) {
+    if (remaining < 0 || (totalBudget > 0 && utilization > overBudgetThreshold)) {
       state = BudgetThresholdState.overBudget;
     } else if (utilization >= approachingThreshold) {
       state = BudgetThresholdState.approachingLimit;
@@ -73,7 +77,8 @@ class BudgetOptimizerService {
 
     final Map<BudgetCategory, double> percentages = {};
     for (final entry in breakdown.entries) {
-      percentages[entry.key] = totalPlanned > 0 ? (entry.value / totalPlanned) * 100.0 : 0.0;
+      final pct = totalPlanned > 0 ? (entry.value / totalPlanned) * 100.0 : 0.0;
+      percentages[entry.key] = pct.isNaN || pct.isInfinite ? 0.0 : pct;
     }
 
     return BudgetSummary(
@@ -96,6 +101,7 @@ class BudgetOptimizerService {
     required double totalBudget,
     required List<BudgetItem> items,
     required double overageAmount,
+    String currency = 'USD',
   }) {
     if (overageAmount <= 0) return [];
 
@@ -146,12 +152,16 @@ class BudgetOptimizerService {
       final double savings = (item.estimatedAmount * reductionRate).clamp(0, remainingToSave);
       if (savings > 20) {
         final double proposed = item.estimatedAmount - savings;
+        final currentFmt = CurrencyFormatter.format(item.estimatedAmount, currency: currency);
+        final propFmt = CurrencyFormatter.format(proposed, currency: currency);
+        final saveFmt = CurrencyFormatter.format(savings, currency: currency);
+
         proposals.add(BudgetAdjustmentProposal(
           id: uuid.v4(),
           budgetItemId: item.id,
           category: item.category,
           title: 'Optimize ${item.name}',
-          description: 'Reduce estimate from \$${item.estimatedAmount.toStringAsFixed(0)} to \$${proposed.toStringAsFixed(0)} (save \$${savings.toStringAsFixed(0)})',
+          description: 'Reduce estimate from $currentFmt to $propFmt (save $saveFmt)',
           currentAmount: item.estimatedAmount,
           proposedAmount: proposed,
           rationale: rationale,

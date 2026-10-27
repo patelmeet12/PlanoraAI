@@ -3,7 +3,8 @@
 [![Flutter Web](https://img.shields.io/badge/Platform-Flutter%20Web-02569B?logo=flutter)](https://flutter.dev)
 [![Dart Version](https://img.shields.io/badge/Dart-3.10%2B-blue?logo=dart)](https://dart.dev)
 [![Architecture](https://img.shields.io/badge/Architecture-Clean%20%2F%20Feature--First-green)](#architecture--code-quality)
-[![Tests Passing](https://img.shields.io/badge/Automated%20Tests-29%20Passing-brightgreen)](#testing-strategy--verification)
+[![Tests Passing](https://img.shields.io/badge/Automated%20Tests-67%20Passing-brightgreen)](#testing-strategy--verification)
+[![Test Coverage](https://img.shields.io/badge/Coverage-80.01%25-brightgreen)](#testing-strategy--verification)
 [![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 
 > **"Describe your event → Generate your plan → Optimize your budget → Organize vendors → Follow your timeline → Adapt when things change."**
@@ -327,19 +328,25 @@ The codebase includes comprehensive automated tests covering unit logic, reposit
 flutter test
 ```
 
-### Verified Test Suites (29 Passing Tests):
+### Verified Test Suites (67 Passing Tests — 80.01% Coverage):
 
-| Test Suite | File Path | Coverage Focus | Result |
-| :--- | :--- | :--- | :--- |
-| **Budget Optimizer** | `test/unit/budget_optimizer_test.dart` | Total calculations, remaining balance, cost per guest, threshold classification, non-destructive reduction safety | ✅ Passed |
-| **Timeline Generator** | `test/unit/timeline_generator_test.dart` | Horizon compression ($\le 10$d vs $>60$d), overdue task detection, blocked task identification, circular dependency checks | ✅ Passed |
-| **Vendor Service** | `test/unit/vendor_service_test.dart` | Vendor side-by-side comparison, booking progress metric calculation | ✅ Passed |
-| **Ideas Generator** | `test/unit/ideas_generator_test.dart` | Constraint-aware generation (outdoor weather contingency, dietary stations), multi-criteria filtering | ✅ Passed |
-| **Change Impact** | `test/unit/change_impact_analyzer_test.dart` | Guest count deltas, catering shifts, budget reduction warnings, accelerated deadline flags | ✅ Passed |
-| **Form Validation** | `test/unit/form_validators_test.dart` | Name length, numeric constraints, negative numbers, past dates | ✅ Passed |
-| **Local Repository** | `test/repositories/event_repository_test.dart` | CRUD operations, corrupted JSON recovery, active event fallback, JSON backup import/export | ✅ Passed |
-| **Onboarding Wizard** | `test/widgets/wizard_widget_test.dart` | 4-step wizard navigation, input validation, state preservation across steps | ✅ Passed |
-| **Dashboard Screen** | `test/widgets/dashboard_widget_test.dart` | Header countdown, Next Best Action card, quick complete task trigger, budget health visualization | ✅ Passed |
+| Test Suite | File Path | Coverage Focus | Tests | Result |
+| :--- | :--- | :--- | :--- | :--- |
+| **Budget Optimizer** | `test/unit/budget_optimizer_test.dart` | Total calculations, remaining balance, cost per guest, threshold classification, zero budget/guest NaN safety, non-destructive reduction safety, dynamic currency | 6 | ✅ Passed |
+| **Timeline Generator** | `test/unit/timeline_generator_test.dart` | Horizon compression ($\le 10$d vs $>60$d), overdue task detection, blocked task identification, circular dependency checks | 5 | ✅ Passed |
+| **Vendor Service** | `test/unit/vendor_service_test.dart` | Side-by-side comparison, booking progress metric calculation, sample vendor generation, model serialization | 5 | ✅ Passed |
+| **Ideas Generator** | `test/unit/ideas_generator_test.dart` | Constraint-aware generation (outdoor weather contingency, dietary stations), multi-criteria filtering | 4 | ✅ Passed |
+| **AI Copilot** | `test/unit/ai_copilot_test.dart` | Budget cuts, guest count increases, eco-friendly plans, 7-day emergency sprints, weather contingency, next action recommendation, context fallback | 7 | ✅ Passed |
+| **Event Planning Engine** | `test/unit/event_planning_engine_test.dart` | Deterministic generation across categories, structured AI response validation, robust JSON parsing fallback | 4 | ✅ Passed |
+| **Run Sheet Generator** | `test/unit/run_sheet_generator_test.dart` | Minute-by-minute wedding & party schedules, location conflict anomaly detection, prerequisites tracking | 4 | ✅ Passed |
+| **Change Impact** | `test/unit/change_impact_analyzer_test.dart` | Guest count deltas, catering shifts, budget reduction warnings, accelerated deadline flags, category shift analysis | 4 | ✅ Passed |
+| **Form Validation** | `test/unit/form_validators_test.dart` | Name length, numeric constraints, negative numbers rejection, NaN/Infinity safety, venue & notes constraints, past dates | 7 | ✅ Passed |
+| **Formatters** | `test/unit/formatters_test.dart` | CurrencyFormatter (USD, EUR, GBP, INR, compact scales), DateFormatter (full, medium, short, relative days) | 4 | ✅ Passed |
+| **Models & Samples** | `test/unit/models_and_samples_test.dart` | SampleEvents (Wedding, Birthday, Community), EventIdea, ChatMessage, RunSheetItem, BudgetAdjustmentProposal serialization | 5 | ✅ Passed |
+| **Local Repository** | `test/repositories/event_repository_test.dart` | CRUD operations, corrupted JSON recovery, active event fallback, JSON backup import/export, non-map array rejection | 6 | ✅ Passed |
+| **Accessibility & Shared** | `test/widgets/accessibility_widget_test.dart` | StatusBadge semantics without redundancy, AccessibleCard container semantics, ConfirmDialog modal lifecycle, EmptyStateView | 4 | ✅ Passed |
+| **Onboarding Wizard** | `test/widgets/wizard_widget_test.dart` | 4-step wizard navigation, input validation, state preservation across steps | 1 | ✅ Passed |
+| **Dashboard Screen** | `test/widgets/dashboard_widget_test.dart` | Header countdown, Next Best Action card, quick complete task trigger, budget health visualization | 1 | ✅ Passed |
 
 ---
 
@@ -352,7 +359,7 @@ flutter test
 
 ### 1. Clone & Navigate
 ```bash
-git clone <repository_url>
+git clone https://github.com/patelmeet12/PlanoraAI.git
 cd planora_ai
 ```
 
@@ -364,14 +371,20 @@ flutter pub get
 ### 3. Run Static Code Analysis
 Verify that all code complies with strict lint rules:
 ```bash
-flutter analyze
+flutter analyze --fatal-infos
 # Output: No issues found!
 ```
 
-### 4. Run Automated Test Suite
+### 4. Run Automated Test Suite with Coverage
 ```bash
-flutter test
-# Output: All 29 tests passed!
+flutter test --coverage
+# Output: All 67 tests passed! (80.01% line coverage)
+```
+
+### 5. Build Web Release Bundle
+```bash
+flutter build web --release --no-tree-shake-icons
+# Output: ✓ Built build/web
 ```
 
 ### 5. Launch Local Dev Server (Flutter Web)

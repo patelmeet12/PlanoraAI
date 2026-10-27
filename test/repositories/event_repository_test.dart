@@ -149,5 +149,13 @@ void main() {
       expect(restored.length, 1);
       expect(restored.first.event.name, 'Export Test');
     });
+
+    test('importDataJson safely rejects non-map arrays, objects, and malformed strings', () async {
+      expect(await repository.importDataJson(''), false);
+      expect(await repository.importDataJson('not json'), false);
+      expect(await repository.importDataJson('{"key": "value"}'), false); // Not an array
+      expect(await repository.importDataJson('[123, 456]'), false); // Array of numbers, not maps
+      expect(await repository.importDataJson('["str1", "str2"]'), false); // Array of strings
+    });
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/widgets/accessible_card.dart';
@@ -82,7 +83,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                         ),
                       const SizedBox(width: 10),
                       ElevatedButton.icon(
-                        onPressed: () => _showAddVendorDialog(context, aggregate.event.id),
+                        onPressed: () => _showAddVendorDialog(context, aggregate.event.id, aggregate.event.currency),
                         icon: const Icon(Icons.add_business, size: 18),
                         label: const Text('Add Vendor'),
                       ),
@@ -358,7 +359,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                     IconButton(
                       icon: const Icon(Icons.edit_outlined, size: 18),
                       tooltip: 'Edit Status / Notes',
-                      onPressed: () => _showEditVendorDialog(context, vendor),
+                      onPressed: () => _showEditVendorDialog(context, vendor, cur),
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline, size: 18),
@@ -386,13 +387,16 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
     );
   }
 
-  void _showAddVendorDialog(BuildContext context, String eventId) {
+  void _showAddVendorDialog(BuildContext context, String eventId, String currency) {
     final nameCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
     final notesCtrl = TextEditingController();
     VendorCategory category = VendorCategory.caterer;
     BookingStatus bookingStatus = BookingStatus.inquiry;
     PaymentStatus paymentStatus = PaymentStatus.unpaid;
+    String? nameError;
+    String? priceError;
+    final symbol = AppConstants.currencySymbols[currency] ?? r'$';
 
     showDialog(
       context: context,
@@ -407,7 +411,13 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                   children: [
                     TextField(
                       controller: nameCtrl,
-                      decoration: const InputDecoration(labelText: 'Vendor / Company Name *'),
+                      decoration: InputDecoration(
+                        labelText: 'Vendor / Company Name *',
+                        errorText: nameError,
+                      ),
+                      onChanged: (_) {
+                        if (nameError != null) setDlgState(() => nameError = null);
+                      },
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<VendorCategory>(
@@ -422,7 +432,14 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                     TextField(
                       controller: priceCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Price / Quote *', prefixText: '\$ '),
+                      decoration: InputDecoration(
+                        labelText: 'Price / Quote *',
+                        prefixText: '$symbol ',
+                        errorText: priceError,
+                      ),
+                      onChanged: (_) {
+                        if (priceError != null) setDlgState(() => priceError = null);
+                      },
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<BookingStatus>(
@@ -447,8 +464,21 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     final name = nameCtrl.text.trim();
-                    final price = double.tryParse(priceCtrl.text.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
-                    if (name.isEmpty) return;
+                    final priceVal = priceCtrl.text.trim();
+                    bool hasErr = false;
+
+                    if (name.isEmpty) {
+                      setDlgState(() => nameError = 'Vendor name is required');
+                      hasErr = true;
+                    }
+
+                    final price = double.tryParse(priceVal.replaceAll(RegExp(r'[^0-9.]'), ''));
+                    if (price == null || price < 0 || price.isNaN || price.isInfinite) {
+                      setDlgState(() => priceError = 'Enter a valid non-negative price');
+                      hasErr = true;
+                    }
+
+                    if (hasErr) return;
 
                     const uuid = Uuid();
                     final newVendor = VendorModel(
@@ -456,7 +486,7 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                       eventId: eventId,
                       name: name,
                       category: category,
-                      quotedPrice: price,
+                      quotedPrice: price ?? 0.0,
                       bookingStatus: bookingStatus,
                       paymentStatus: paymentStatus,
                       notes: notesCtrl.text.trim(),
@@ -473,14 +503,20 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
           },
         );
       },
-    );
+    ).then((_) {
+      nameCtrl.dispose();
+      priceCtrl.dispose();
+      notesCtrl.dispose();
+    });
   }
 
-  void _showEditVendorDialog(BuildContext context, VendorModel vendor) {
+  void _showEditVendorDialog(BuildContext context, VendorModel vendor, String currency) {
     final notesCtrl = TextEditingController(text: vendor.notes);
     final quoteCtrl = TextEditingController(text: vendor.quotedPrice.toStringAsFixed(0));
     BookingStatus bookingStatus = vendor.bookingStatus;
     PaymentStatus paymentStatus = vendor.paymentStatus;
+    String? quoteError;
+    final symbol = AppConstants.currencySymbols[currency] ?? r'$';
 
     showDialog(
       context: context,
@@ -496,7 +532,14 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                     TextField(
                       controller: quoteCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Quoted Price', prefixText: '\$ '),
+                      decoration: InputDecoration(
+                        labelText: 'Quoted Price',
+                        prefixText: '$symbol ',
+                        errorText: quoteError,
+                      ),
+                      onChanged: (_) {
+                        if (quoteError != null) setDlgState(() => quoteError = null);
+                      },
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<BookingStatus>(
@@ -529,7 +572,13 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
                 TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
                 ElevatedButton(
                   onPressed: () async {
-                    final quote = double.tryParse(quoteCtrl.text.replaceAll(RegExp(r'[^0-9.]'), '')) ?? vendor.quotedPrice;
+                    final quoteVal = quoteCtrl.text.trim();
+                    final quote = double.tryParse(quoteVal.replaceAll(RegExp(r'[^0-9.]'), ''));
+                    if (quote == null || quote < 0 || quote.isNaN || quote.isInfinite) {
+                      setDlgState(() => quoteError = 'Enter a valid quote amount');
+                      return;
+                    }
+
                     final updated = vendor.copyWith(
                       quotedPrice: quote,
                       bookingStatus: bookingStatus,
@@ -547,6 +596,9 @@ class _VendorsScreenState extends ConsumerState<VendorsScreen> {
           },
         );
       },
-    );
+    ).then((_) {
+      quoteCtrl.dispose();
+      notesCtrl.dispose();
+    });
   }
 }

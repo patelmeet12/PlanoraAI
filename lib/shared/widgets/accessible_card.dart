@@ -48,6 +48,7 @@ class AccessibleCard extends StatelessWidget {
 
     if (semanticLabel != null) {
       return Semantics(
+        container: true,
         label: semanticLabel,
         button: onTap != null,
         child: card,

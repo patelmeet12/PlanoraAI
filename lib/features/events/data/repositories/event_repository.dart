@@ -133,9 +133,10 @@ class LocalEventRepository implements EventRepository {
       if (decoded is List) {
         final List<EventAggregate> list = [];
         for (final item in decoded) {
-          if (item is Map<String, dynamic>) {
+          if (item is Map) {
             try {
-              list.add(EventAggregate.fromJson(item));
+              final map = Map<String, dynamic>.from(item);
+              list.add(EventAggregate.fromJson(map));
             } catch (_) {
               // Gracefully skip corrupted single item
             }
@@ -223,13 +224,23 @@ class LocalEventRepository implements EventRepository {
     try {
       final decoded = jsonDecode(jsonString);
       if (decoded is List) {
-        // Validate each item
+        if (decoded.isEmpty) {
+          await prefs.setString(AppConstants.storageKeyEvents, '[]');
+          return true;
+        }
+        final List<EventAggregate> validated = [];
         for (final item in decoded) {
-          if (item is Map<String, dynamic>) {
-            EventAggregate.fromJson(item);
+          if (item is Map) {
+            final map = Map<String, dynamic>.from(item);
+            validated.add(EventAggregate.fromJson(map));
+          } else {
+            return false;
           }
         }
-        await prefs.setString(AppConstants.storageKeyEvents, jsonString);
+        await prefs.setString(
+          AppConstants.storageKeyEvents,
+          jsonEncode(validated.map((e) => e.toJson()).toList()),
+        );
         return true;
       }
     } catch (_) {
