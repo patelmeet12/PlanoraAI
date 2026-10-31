@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'event_category.dart';
 
 class EventModel {
@@ -149,4 +150,50 @@ class EventModel {
           : DateTime.now(),
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EventModel &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          category == other.category &&
+          date == other.date &&
+          city == other.city &&
+          guestCount == other.guestCount &&
+          totalBudget == other.totalBudget &&
+          currency == other.currency &&
+          theme == other.theme &&
+          venueType == other.venueType &&
+          style == other.style &&
+          listEquals(dietaryRequirements, other.dietaryRequirements) &&
+          listEquals(accessibilityRequirements, other.accessibilityRequirements) &&
+          planningComplexity == other.planningComplexity &&
+          existingBookings == other.existingBookings &&
+          specialRequirements == other.specialRequirements &&
+          createdAt == other.createdAt &&
+          updatedAt == other.updatedAt;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        name,
+        category,
+        date,
+        city,
+        guestCount,
+        totalBudget,
+        currency,
+        theme,
+        venueType,
+        style,
+        Object.hashAll(dietaryRequirements),
+        Object.hashAll(accessibilityRequirements),
+        planningComplexity,
+        existingBookings,
+        specialRequirements,
+        createdAt,
+        updatedAt,
+      );
 }

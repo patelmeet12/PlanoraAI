@@ -56,6 +56,26 @@ class ChangeProposal {
       extraData: json['extraData'] as Map<String, dynamic>?,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChangeProposal &&
+          runtimeType == other.runtimeType &&
+          actionType == other.actionType &&
+          description == other.description &&
+          newBudget == other.newBudget &&
+          newGuestCount == other.newGuestCount &&
+          newDate == other.newDate;
+
+  @override
+  int get hashCode => Object.hash(
+        actionType,
+        description,
+        newBudget,
+        newGuestCount,
+        newDate,
+      );
 }
 
 class ChatMessage {
@@ -119,4 +139,26 @@ class ChatMessage {
       isApplied: json['isApplied'] as bool? ?? false,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChatMessage &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          sender == other.sender &&
+          text == other.text &&
+          timestamp == other.timestamp &&
+          proposal == other.proposal &&
+          isApplied == other.isApplied;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        sender,
+        text,
+        timestamp,
+        proposal,
+        isApplied,
+      );
 }

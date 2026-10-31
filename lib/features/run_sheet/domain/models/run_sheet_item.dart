@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class RunSheetItem {
   final String id;
   final String eventId;
@@ -87,4 +89,36 @@ class RunSheetItem {
       isCompleted: json['isCompleted'] as bool? ?? false,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RunSheetItem &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          eventId == other.eventId &&
+          startTime == other.startTime &&
+          endTime == other.endTime &&
+          title == other.title &&
+          description == other.description &&
+          category == other.category &&
+          location == other.location &&
+          leadPerson == other.leadPerson &&
+          listEquals(prerequisites, other.prerequisites) &&
+          isCompleted == other.isCompleted;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        eventId,
+        startTime,
+        endTime,
+        title,
+        description,
+        category,
+        location,
+        leadPerson,
+        Object.hashAll(prerequisites),
+        isCompleted,
+      );
 }

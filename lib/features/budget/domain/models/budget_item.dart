@@ -82,4 +82,34 @@ class BudgetItem {
       priority: (json['priority'] as num?)?.toInt() ?? 2,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BudgetItem &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          eventId == other.eventId &&
+          category == other.category &&
+          customCategoryName == other.customCategoryName &&
+          name == other.name &&
+          estimatedAmount == other.estimatedAmount &&
+          confirmedAmount == other.confirmedAmount &&
+          isConfirmed == other.isConfirmed &&
+          notes == other.notes &&
+          priority == other.priority;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        eventId,
+        category,
+        customCategoryName,
+        name,
+        estimatedAmount,
+        confirmedAmount,
+        isConfirmed,
+        notes,
+        priority,
+      );
 }

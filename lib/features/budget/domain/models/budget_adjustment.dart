@@ -85,4 +85,32 @@ class BudgetAdjustmentProposal {
       ),
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BudgetAdjustmentProposal &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          budgetItemId == other.budgetItemId &&
+          category == other.category &&
+          title == other.title &&
+          description == other.description &&
+          currentAmount == other.currentAmount &&
+          proposedAmount == other.proposedAmount &&
+          rationale == other.rationale &&
+          status == other.status;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        budgetItemId,
+        category,
+        title,
+        description,
+        currentAmount,
+        proposedAmount,
+        rationale,
+        status,
+      );
 }

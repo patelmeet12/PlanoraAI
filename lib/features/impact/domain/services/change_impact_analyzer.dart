@@ -17,6 +17,7 @@ class ChangeImpactResult {
   final double originalCostPerGuest;
   final double proposedCostPerGuest;
   final double estimatedCateringImpact;
+  final double confirmedDeficit;
   final BudgetThresholdState originalBudgetState;
   final BudgetThresholdState proposedBudgetState;
 
@@ -35,6 +36,7 @@ class ChangeImpactResult {
     required this.originalCostPerGuest,
     required this.proposedCostPerGuest,
     required this.estimatedCateringImpact,
+    this.confirmedDeficit = 0.0,
     required this.originalBudgetState,
     required this.proposedBudgetState,
     required this.affectedCategories,
@@ -48,6 +50,7 @@ class ChangeImpactResult {
       guestCountDelta.abs() >= 15 ||
       budgetDelta.abs() >= 500 ||
       daysShiftDelta.abs() >= 7 ||
+      confirmedDeficit > 0 ||
       warnings.isNotEmpty;
 }
 
@@ -109,10 +112,10 @@ class ChangeImpactAnalyzer {
     // Event Category / Type Changes
     if (originalEvent.category != proposedEvent.category) {
       warnings.add(
-        'Event category changed from ${originalEvent.category.displayName} to ${proposedEvent.category.displayName}. Core themes, milestones, and vendor expectations will shift.',
+        'Event type changed from ${originalEvent.category.displayName} to ${proposedEvent.category.displayName}. Core themes, milestones, and vendor expectations will shift.',
       );
       recommendations.add(
-        'Review and regenerate category-specific checklist tasks to reflect ${proposedEvent.category.displayName} conventions.',
+        'Conduct a theme and milestone realignment review to adapt tasks and decor to the new ${proposedEvent.category.displayName} format.',
       );
       affectedCategories.add('Theme & Milestone Strategy');
     }
@@ -174,6 +177,25 @@ class ChangeImpactAnalyzer {
       }
     }
 
+    // Confirmed Contracts Deficit Check
+    final double confirmedTotal = currentBudgetItems
+        .where((i) => i.isConfirmed)
+        .fold(0.0, (sum, i) => sum + i.confirmedAmount);
+
+    double confirmedDeficit = 0.0;
+    if (proposedEvent.totalBudget < confirmedTotal) {
+      confirmedDeficit = confirmedTotal - proposedEvent.totalBudget;
+      final deficitFmt = CurrencyFormatter.format(confirmedDeficit, currency: cur);
+      final confirmedFmt = CurrencyFormatter.format(confirmedTotal, currency: cur);
+      final budgetFmt = CurrencyFormatter.format(proposedEvent.totalBudget, currency: cur);
+      warnings.add(
+        'Critical: Proposed budget ($budgetFmt) is less than already confirmed vendor contracts ($confirmedFmt) by $deficitFmt.',
+      );
+      recommendations.add(
+        'Renegotiate or release existing confirmed vendor agreements before lowering the budget ceiling.',
+      );
+    }
+
     // Date Shift Changes
     if (daysShiftDelta != 0) {
       if (daysShiftDelta < 0) {
@@ -206,16 +228,6 @@ class ChangeImpactAnalyzer {
       );
     }
 
-    // Category Shift Changes
-    if (proposedEvent.category != originalEvent.category) {
-      warnings.add(
-        'Event type changed from ${originalEvent.category.displayName} to ${proposedEvent.category.displayName}.',
-      );
-      recommendations.add(
-        'Conduct a theme and milestone realignment review to adapt tasks and decor to the new ${proposedEvent.category.displayName} format.',
-      );
-    }
-
     return ChangeImpactResult(
       originalEvent: originalEvent,
       proposedEvent: proposedEvent,
@@ -225,6 +237,7 @@ class ChangeImpactAnalyzer {
       originalCostPerGuest: origSummary.costPerGuest,
       proposedCostPerGuest: proposedSummary.costPerGuest,
       estimatedCateringImpact: cateringDeltaCost,
+      confirmedDeficit: confirmedDeficit,
       originalBudgetState: origSummary.thresholdState,
       proposedBudgetState: proposedSummary.thresholdState,
       affectedCategories: affectedCategories,

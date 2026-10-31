@@ -130,5 +130,41 @@ void main() {
       expect(result.warnings.any((w) => w.contains('Event type changed')), true);
       expect(result.recommendations.any((r) => r.contains('realignment')), true);
     });
+
+    test('Identifies confirmed contract deficit when proposed budget is below confirmed agreements', () {
+      // Confirmed ballroom is $8000. If user reduces budget to $6000:
+      final proposedEvent = origEvent.copyWith(totalBudget: 6000);
+
+      final result = ChangeImpactAnalyzer.analyze(
+        originalEvent: origEvent,
+        proposedEvent: proposedEvent,
+        currentBudgetItems: budgetItems,
+        currentTasks: tasks,
+        currentVendors: vendors,
+      );
+
+      expect(result.confirmedDeficit, 2000.0);
+      expect(result.hasHighImpact, true);
+      expect(result.warnings.any((w) => w.contains('already confirmed vendor contracts')), true);
+      expect(result.recommendations.any((r) => r.contains('Renegotiate or release')), true);
+    });
+
+    test('Reports clean impact with zero false warnings when proposed event is identical', () {
+      final result = ChangeImpactAnalyzer.analyze(
+        originalEvent: origEvent,
+        proposedEvent: origEvent,
+        currentBudgetItems: budgetItems,
+        currentTasks: tasks,
+        currentVendors: vendors,
+      );
+
+      expect(result.guestCountDelta, 0);
+      expect(result.budgetDelta, 0.0);
+      expect(result.daysShiftDelta, 0);
+      expect(result.confirmedDeficit, 0.0);
+      expect(result.affectedCategories, isEmpty);
+      expect(result.affectedVendors, isEmpty);
+      expect(result.impactedTasks, isEmpty);
+    });
   });
 }

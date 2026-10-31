@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/repositories/event_repository.dart';
-import '../../data/repositories/sample_events.dart';
 import '../../domain/models/event_model.dart';
 import '../../../budget/domain/models/budget_item.dart';
 import '../../../timeline/domain/models/timeline_task.dart';
@@ -20,16 +19,7 @@ final eventRepositoryProvider = Provider<EventRepository>((ref) {
 
 final allEventsProvider = FutureProvider<List<EventAggregate>>((ref) async {
   final repo = ref.watch(eventRepositoryProvider);
-  final events = await repo.getAllEvents();
-  if (events.isEmpty) {
-    // Populate with initial high quality samples
-    final samples = SampleEvents.getInitialSamples();
-    for (final s in samples) {
-      await repo.saveEvent(s);
-    }
-    return samples;
-  }
-  return events;
+  return repo.ensureSeeded();
 });
 
 class ActiveEventNotifier extends AsyncNotifier<EventAggregate?> {
@@ -38,12 +28,8 @@ class ActiveEventNotifier extends AsyncNotifier<EventAggregate?> {
     final repo = ref.watch(eventRepositoryProvider);
     var active = await repo.getActiveEvent();
     if (active == null) {
-      // Seed samples
-      final samples = SampleEvents.getInitialSamples();
-      for (final s in samples) {
-        await repo.saveEvent(s);
-      }
-      active = samples.first;
+      final seeded = await repo.ensureSeeded();
+      active = seeded.isNotEmpty ? seeded.first : null;
     }
     return active;
   }
@@ -125,6 +111,7 @@ class ActiveEventNotifier extends AsyncNotifier<EventAggregate?> {
         return t.copyWith(
           isCompleted: next,
           completedAt: next ? DateTime.now() : null,
+          clearCompletedAt: !next,
         );
       }
       return t;
@@ -266,11 +253,10 @@ class ActiveEventNotifier extends AsyncNotifier<EventAggregate?> {
   Future<void> resetToSampleData() async {
     final repo = ref.read(eventRepositoryProvider);
     await repo.clearAllData();
-    final samples = SampleEvents.getInitialSamples();
-    for (final s in samples) {
-      await repo.saveEvent(s);
+    final samples = await repo.ensureSeeded();
+    if (samples.isNotEmpty) {
+      await repo.setActiveEventId(samples.first.event.id);
     }
-    await repo.setActiveEventId(samples.first.event.id);
     ref.invalidate(allEventsProvider);
     ref.invalidateSelf();
   }

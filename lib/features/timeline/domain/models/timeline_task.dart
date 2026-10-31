@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 enum TaskPriority {
   urgent,
   high,
@@ -84,6 +86,7 @@ class TimelineTask {
     TaskPriority? priority,
     bool? isCompleted,
     DateTime? completedAt,
+    bool clearCompletedAt = false,
     String? category,
     List<String>? dependencies,
     String? owner,
@@ -97,7 +100,7 @@ class TimelineTask {
       dueDate: dueDate ?? this.dueDate,
       priority: priority ?? this.priority,
       isCompleted: isCompleted ?? this.isCompleted,
-      completedAt: completedAt ?? this.completedAt,
+      completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
       category: category ?? this.category,
       dependencies: dependencies ?? this.dependencies,
       owner: owner ?? this.owner,
@@ -145,4 +148,38 @@ class TimelineTask {
       notes: json['notes'] as String?,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TimelineTask &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          eventId == other.eventId &&
+          title == other.title &&
+          description == other.description &&
+          dueDate == other.dueDate &&
+          priority == other.priority &&
+          isCompleted == other.isCompleted &&
+          completedAt == other.completedAt &&
+          category == other.category &&
+          listEquals(dependencies, other.dependencies) &&
+          owner == other.owner &&
+          notes == other.notes;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        eventId,
+        title,
+        description,
+        dueDate,
+        priority,
+        isCompleted,
+        completedAt,
+        category,
+        Object.hashAll(dependencies),
+        owner,
+        notes,
+      );
 }

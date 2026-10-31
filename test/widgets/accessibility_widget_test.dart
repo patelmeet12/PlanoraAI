@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:planora_ai/features/events/presentation/providers/event_providers.dart';
 import 'package:planora_ai/shared/widgets/accessible_card.dart';
+import 'package:planora_ai/shared/widgets/app_scaffold.dart';
 import 'package:planora_ai/shared/widgets/confirm_dialog.dart';
 import 'package:planora_ai/shared/widgets/empty_state_view.dart';
 import 'package:planora_ai/shared/widgets/status_badge.dart';
@@ -124,6 +128,41 @@ void main() {
       await tester.pump();
 
       expect(actionTriggered, true);
+    });
+
+    testWidgets('AppScaffold renders accessible navigation rail on desktop and provides semantics', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1280, 960);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+          child: const MaterialApp(
+            home: AppScaffold(
+              currentPath: '/',
+              child: Text('Dashboard Body Content'),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dashboard Body Content'), findsOneWidget);
+      expect(find.text('Planora AI'), findsOneWidget);
+
+      // Verify semantics on navigation rail items
+      final handle = tester.ensureSemantics();
+      expect(find.byTooltip('Toggle Theme'), findsOneWidget);
+      expect(find.text('New Plan'), findsOneWidget);
+      handle.dispose();
     });
   });
 }

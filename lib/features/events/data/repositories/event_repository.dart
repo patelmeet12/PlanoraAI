@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/constants/app_constants.dart';
+import 'sample_events.dart';
 import '../../domain/models/event_model.dart';
 import '../../domain/models/event_category.dart';
 import '../../../budget/domain/models/budget_item.dart';
@@ -103,10 +105,35 @@ class EventAggregate {
           const [],
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EventAggregate &&
+          runtimeType == other.runtimeType &&
+          event == other.event &&
+          listEquals(budgetItems, other.budgetItems) &&
+          listEquals(tasks, other.tasks) &&
+          listEquals(vendors, other.vendors) &&
+          listEquals(ideas, other.ideas) &&
+          listEquals(runSheet, other.runSheet) &&
+          listEquals(chatMessages, other.chatMessages);
+
+  @override
+  int get hashCode => Object.hash(
+        event,
+        Object.hashAll(budgetItems),
+        Object.hashAll(tasks),
+        Object.hashAll(vendors),
+        Object.hashAll(ideas),
+        Object.hashAll(runSheet),
+        Object.hashAll(chatMessages),
+      );
 }
 
 abstract class EventRepository {
   Future<List<EventAggregate>> getAllEvents();
+  Future<List<EventAggregate>> ensureSeeded();
   Future<EventAggregate?> getActiveEvent();
   Future<void> setActiveEventId(String eventId);
   Future<void> saveEvent(EventAggregate aggregate);
@@ -120,6 +147,19 @@ class LocalEventRepository implements EventRepository {
   final SharedPreferences prefs;
 
   LocalEventRepository(this.prefs);
+
+  @override
+  Future<List<EventAggregate>> ensureSeeded() async {
+    final events = await getAllEvents();
+    if (events.isEmpty) {
+      final samples = SampleEvents.getInitialSamples();
+      for (final s in samples) {
+        await saveEvent(s);
+      }
+      return samples;
+    }
+    return events;
+  }
 
   @override
   Future<List<EventAggregate>> getAllEvents() async {

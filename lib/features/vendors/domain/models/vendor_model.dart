@@ -118,4 +118,46 @@ class VendorModel {
       isDemoData: json['isDemoData'] as bool? ?? false,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is VendorModel &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          eventId == other.eventId &&
+          name == other.name &&
+          category == other.category &&
+          customCategoryName == other.customCategoryName &&
+          contactEmail == other.contactEmail &&
+          contactPhone == other.contactPhone &&
+          website == other.website &&
+          estimatedPrice == other.estimatedPrice &&
+          quotedPrice == other.quotedPrice &&
+          bookingStatus == other.bookingStatus &&
+          paymentStatus == other.paymentStatus &&
+          userRating == other.userRating &&
+          followUpDate == other.followUpDate &&
+          notes == other.notes &&
+          isDemoData == other.isDemoData;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        eventId,
+        name,
+        category,
+        customCategoryName,
+        contactEmail,
+        contactPhone,
+        website,
+        estimatedPrice,
+        quotedPrice,
+        bookingStatus,
+        paymentStatus,
+        userRating,
+        followUpDate,
+        notes,
+        isDemoData,
+      );
 }

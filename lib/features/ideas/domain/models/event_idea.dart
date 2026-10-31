@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 enum IdeaComplexity {
   low,
   medium,
@@ -138,4 +140,46 @@ class EventIdea {
       isAddedToTasks: json['isAddedToTasks'] as bool? ?? false,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EventIdea &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          eventId == other.eventId &&
+          title == other.title &&
+          category == other.category &&
+          description == other.description &&
+          estimatedCostRange == other.estimatedCostRange &&
+          minCost == other.minCost &&
+          maxCost == other.maxCost &&
+          guestSuitability == other.guestSuitability &&
+          complexity == other.complexity &&
+          listEquals(benefits, other.benefits) &&
+          listEquals(limitations, other.limitations) &&
+          matchReason == other.matchReason &&
+          isEcoFriendly == other.isEcoFriendly &&
+          isBookmarked == other.isBookmarked &&
+          isAddedToTasks == other.isAddedToTasks;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        eventId,
+        title,
+        category,
+        description,
+        estimatedCostRange,
+        minCost,
+        maxCost,
+        guestSuitability,
+        complexity,
+        Object.hashAll(benefits),
+        Object.hashAll(limitations),
+        matchReason,
+        isEcoFriendly,
+        isBookmarked,
+        isAddedToTasks,
+      );
 }
